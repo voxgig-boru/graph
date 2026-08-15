@@ -1,0 +1,10 @@
+{
+  "name": "graph-aql",
+  "description": "Agent guidance for calling the Graph pathfinding library correctly from boru: the calling convention, the API, verified copy-paste idioms, and fixes for common mistakes. The library is DESIGNED but NOT YET IMPLEMENTED \u2014 see DESIGN.md.",
+  "version": "0.1.0",
+  "author": { "name": "voxgig-boru" },
+  "homepage": "https://github.com/voxgig-boru/graph",
+  "repository": "https://github.com/voxgig-boru/graph",
+  "license": "MIT",
+  "keywords": ["boru", "graph", "pathfinding", "skill", "agent"]
+}

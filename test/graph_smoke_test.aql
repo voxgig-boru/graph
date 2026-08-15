@@ -1,0 +1,14 @@
+# graph — end-to-end smoke run over every public word.
+#
+# PLACEHOLDER. The library is designed but not implemented (see
+# DESIGN.md); the Graph namespace is empty, so this suite only proves the
+# module imports cleanly. Pass = no error, as for every smoke suite here.
+#
+# Run:
+#   boru test/graph_smoke_test.aql
+
+import "./graph.aql" end
+
+print ("--- graph smoke demo ---") end
+print ("Graph namespace is empty: designed, not implemented (see DESIGN.md)") end
+print ("--- ok ---") end

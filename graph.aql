@@ -1,0 +1,32 @@
+# graph: shortest-path and heuristic-search algorithms in boru.
+#
+# STATUS — DESIGNED, NOT IMPLEMENTED.
+#
+# This module is a scaffold. The `Graph` namespace exported at the bottom
+# is deliberately EMPTY: no algorithm, no representation, no helper is
+# written yet. The argued design — what the family is, how the graph is
+# represented, the priority-queue primitive the whole family rests on,
+# and the boru constraints that force each shape — lives in DESIGN.md at
+# the repository root. Read that before adding anything here.
+#
+# The planned roster (see DESIGN.md §4) is the shortest-path family:
+# Dijkstra, A*, greedy best-first, Bellman-Ford, Floyd-Warshall, and the
+# DAG-shortest-path special case — one engine with a pluggable priority.
+#
+# --- representation ---
+#
+# Not yet fixed. DESIGN.md §5 records the candidate shapes (weighted
+# adjacency Map vs edge list), the String-key constraint boru imposes on
+# node names, and the direction ruling inherited from the sibling `sort`
+# library's topological-sort design.
+#
+# Calling convention: forward args, receiver (the graph) LAST —
+# `Graph.verb …args g`, with the piping form `g Graph.verb …args end`
+# equally valid. This matches every sibling library in the ecosystem and
+# is fixed now so the design cannot drift from it later.
+#
+# Imported via `import "./graph.aql"`; the importing script need not
+# pre-import the `boru:*` utilities this module will eventually use.
+
+export "Graph" {
+}
