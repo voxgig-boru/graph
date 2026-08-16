@@ -27,7 +27,7 @@ graph names.
 | 5 | Node identity | **Strings** | boru map keys are String/Atom only — a runtime constraint, not a choice |
 | 6 | Direction | `{a: {b: 3}}` means **an edge a→b of weight 3** | Same ruling, same reason as the sibling `sort` library's topological sort |
 | 7 | Unreachable | **Absent from the result**, no infinity sentinel | boru integer overflow is a hard error, so sentinel arithmetic is a trap |
-| 8 | Heuristics | **Must be self-contained** (params + builtins only) | A function value's free words resolve in the module that *runs* it |
+| 8 | Heuristics | **May call their own module's helpers** (since boru 7e98aeb) | A function value resolves its free words in the module that *defined* it |
 | 9 | Dependency direction | **graph → sort**, never the reverse | Kruskal consumes a sort; nothing in `sort` needs a graph |
 | 10 | Out of scope | flow, matching, colouring, layout, incremental replanning | Each is a different family with a different engine |
 
@@ -205,24 +205,49 @@ sub-optimal path is the worst possible failure. If the docs say
 "consistent" and a caller supplies something weaker, the result may be
 sub-optimal — say so plainly rather than paying for the general case.
 
-### The sharp edge
+### The sharp edge — RESOLVED UPSTREAM, 2026-08-15
+
+> This section previously called the free-word scope rule "the single
+> biggest API risk in the library" and required heuristics to be
+> self-contained. **That is no longer true, and the constraint it imposed
+> on this library's API is lifted.** The original text is kept below the
+> line because it explains why the surrounding design looks the way it
+> does.
+
+boru now resolves a function value's free words in the module that
+**defined** it, on both engines, whether the value is applied, bound to a
+name, or passed through a native callback
+(`design/FUNCTION-VALUE-SCOPE.0.md` §11 rule 1, merged as boru
+`7e98aeb`). A user-supplied heuristic may therefore call the user's own
+helper words freely — `Graph.astar` invoking it does not change where
+those words resolve.
+
+Two consequences for this design:
+
+- **Heuristics need not be self-contained.** Open question 3 below leaned
+  toward `h(n, goal)` over a closure "for exactly that reason"; that
+  reason is gone, so the question reopens on its merits alone.
+- **The one-file constraint is lifted too.** This library is no longer
+  barred from sharing `sort`'s planned heap by the scope rule. Whether to
+  share it is now an ordinary dependency-direction question (row 9),
+  not a language limitation.
+
+What remains true, and is a *different* fault, is the combinator failure
+in `sort`: a bare namespace comparator fed to a combinator raises
+`uncalled_function`. Under boru's ADR-016 a bare name is a call and `/r`
+is how you ask for the value, so the fix there is `Sort.by-number/r`, not
+a scope change.
+
+---
+
+*Original text, superseded:*
 
 **A function value's free words resolve in the module that *runs* it,
 not the module that defines it.** This is the rule that forces the
-sibling `sort` library to be a single file, and it is documented there
-with the failure it caused (splitting the comparators out made
-`Sort.natural` raise `undefined_word` the moment a sort in another module
-drove it).
-
-Applied here: a user-supplied heuristic that calls the user's *own*
-helper word will fail with `undefined_word` when `Graph.astar` invokes
-it. **Heuristics must be self-contained** — parameters and builtins only.
-
-This is the single biggest API risk in the library, it must be stated in
-`AGENTS.md` and `docs/reference.md` rather than discovered, and it wants
-a test that pins the failure so nobody "fixes" it by accident. The same
-rule is currently biting `sort`, where a bare namespace comparator fed to
-a combinator raises `uncalled_function` on current boru `main`.
+sibling `sort` library to be a single file… Applied here: a
+user-supplied heuristic that calls the user's *own* helper word will fail
+with `undefined_word` when `Graph.astar` invokes it. **Heuristics must be
+self-contained** — parameters and builtins only.
 
 ## 8. boru implementation constraints
 
@@ -326,10 +351,13 @@ Kahn loop per §2); minimum spanning tree (Prim, and Kruskal as the
    early-exit result has a *different shape*, since the other distances
    are then only provisional.)
 3. **Does the heuristic take one node or two?** `h(n)` closing over the
-   goal is the textbook form, but §7's free-word rule makes closures
-   fragile. `h(n, goal)` passes the goal explicitly and keeps the
-   heuristic self-contained. (Leaning: two arguments, for exactly that
-   reason.)
+   goal is the textbook form. This previously leaned toward `h(n, goal)`
+   because §7's free-word rule made closures fragile — **that rule is
+   fixed (boru `7e98aeb`), so the leaning is withdrawn** and the question
+   is open on its merits: the textbook single-argument form against the
+   explicitness of passing the goal. Note closures capture by *snapshot*,
+   not by cell, so a captured goal is fixed at construction — which is
+   what you want here.
 4. **Is `Graph.floyd` public or test-only?** It is the natural oracle,
    but O(V³) invites misuse on graphs where it will never finish.
    (Leaning: public, documented with a size warning.)
