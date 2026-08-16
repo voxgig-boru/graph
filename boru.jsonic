@@ -1,6 +1,6 @@
-name: bloom-filter
+name: graph
 major: 0
-minor: 2
+minor: 0
 patch: 0
-main: bloom.aql
-files: [bloom.aql]
+main: graph.aql
+files: [graph.aql]

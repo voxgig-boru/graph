@@ -4,9 +4,9 @@
   "description": "Plugins for the voxgig AQL ecosystem.",
   "plugins": [
     {
-      "name": "bloom-filter-aql",
-      "source": "./plugins/bloom-filter-aql",
-      "description": "Agent guidance for using the Bloom bloom-filter library from AQL.",
+      "name": "graph-aql",
+      "source": "./plugins/graph-aql",
+      "description": "Agent guidance for using the Graph pathfinding library from boru.",
       "version": "0.1.0",
       "license": "MIT"
     }
