@@ -7,8 +7,8 @@
 # Run:
 #   boru test/graph_smoke_test.aql
 
-import "./graph.aql" end
+import "../graph.aql"
 
-print ("--- graph smoke demo ---") end
-print ("Graph namespace is empty: designed, not implemented (see DESIGN.md)") end
-print ("--- ok ---") end
+print ("--- graph smoke demo ---")
+print ("Graph namespace is empty: designed, not implemented (see DESIGN.md)")
+print ("--- ok ---")
