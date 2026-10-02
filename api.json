@@ -2,16 +2,18 @@
   "name": "graph",
   "version": "0.0.0",
   "aql_ref": "main",
+  "verified_against": "boru-lang/boru main @ 64c5ab2 (2026-10-01)",
   "status": "designed-not-implemented",
   "description": "Shortest-path and heuristic-search algorithms for boru (Dijkstra, A*, Floyd-Warshall, Bellman-Ford), to be exposed as the single `Graph` namespace. NOT YET IMPLEMENTED: graph.aql exports an empty namespace. The argued design is in DESIGN.md.",
   "conventions": {
-    "import": "import \"./graph.aql\"",
-    "call": "forward args, receiver (the graph) LAST: `Graph.verb ...args g`. Piping `g Graph.verb ...args end` binds identically; only receiver-first-all-forward misbinds.",
-    "heuristic": "A heuristic passed to Graph.astar must be SELF-CONTAINED (parameters and builtins only). boru resolves a function value's free words in the module that RUNS it, so a heuristic calling the caller's own helper raises undefined_word. See DESIGN.md section 7.",
+    "import": "import \"./graph.aql\" — no `end` needed. A relative import resolves against the directory of the importing file (for both `boru X` and `boru check X`), not the working directory: a suite in test/ imports \"../graph.aql\".",
+    "call": "forward args, receiver (the graph) LAST: `Graph.verb ...args g`. Piping `g Graph.verb ...args` binds identically. Receiver-first all-forward misbinds: `boru check` rejects it when the swapped arguments differ in type (uncalled_function, which also blocks `boru X`); two same-typed args bind silently in signature order.",
+    "heuristic": "A heuristic passed to Graph.astar MAY call its own module's helpers: boru resolves a function value's free words in the module that DEFINED it (fixed upstream in boru 7e98aeb, re-verified on boru main @ 64c5ab2, including through a native callback). Pass it as a value, `h/v` — a bare name holding a function calls (`/r` was renamed `/v`). Close over the goal through a parameter rather than a top-level name, which resolves late. See DESIGN.md section 7.",
     "nodes": "Node names are Strings: boru map keys must be String or Atom.",
     "representation": "Weighted adjacency map, {node: {neighbour: weight}}. `{a: {b: 3}}` is an edge a->b of weight 3. Isolated nodes are representable as `{a: {}}`.",
-    "unreachable": "Unreachable nodes are ABSENT from the result, never an infinity sentinel (boru raises a hard error on 63-bit integer overflow).",
-    "external_deps": []
+    "unreachable": "Unreachable nodes are ABSENT from the result, never an infinity sentinel (boru raises integer_overflow outside the signed 64-bit range rather than wrapping).",
+    "external_deps": [],
+    "limits": "A run is capped at 10,000,000 evaluation steps by default (evaluation_limit; raise with `boru -options steps:N`): a Floyd-Warshall-shaped V^3 relaxation stops around V=55. See DESIGN.md section 8 note."
   },
   "modules": {
     "graph.aql": {

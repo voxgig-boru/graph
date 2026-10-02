@@ -31,18 +31,22 @@ graph.aql                 the library (the Graph namespace) — currently a stub
 DESIGN.md                 the argued plan for what goes in it
 AGENTS.md                 agent guide: how to call this library correctly
 test/graph_*.aql          the five suites (naming convention held, bodies empty)
-test/divergence/          three-surface guard (interpreter · check · byte compiler)
+test/divergence/run.sh    the gate: every suite runs + checks clean on boru main
 docs/                     Diátaxis documentation
+dx-report.md              boru gotchas, and the migration to boru main
 ```
 
 ## Running it
 
-Build the `boru` interpreter, then run any suite — see
-[How-to → Install and run](docs/how-to.md#install-and-run-aql):
+Build `boru` from main, then run any suite — see
+[How-to → Install and run boru](docs/how-to.md#install-and-run-boru):
 
 ```bash
-boru test/graph_smoke_test.aql
+boru test/graph_smoke_test.aql                     # compile + run (the only execution path)
+BORU=$(command -v boru) test/divergence/run.sh     # the full gate
 ```
+
+Verified against boru main @ `64c5ab2` (2026-10-01).
 
 ## License
 

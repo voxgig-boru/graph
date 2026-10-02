@@ -21,12 +21,16 @@
 # library's topological-sort design.
 #
 # Calling convention: forward args, receiver (the graph) LAST —
-# `Graph.verb …args g`, with the piping form `g Graph.verb …args end`
+# `Graph.verb …args g`, with the piping form `g Graph.verb …args`
 # equally valid. This matches every sibling library in the ecosystem and
-# is fixed now so the design cannot drift from it later.
+# is fixed now so the design cannot drift from it later. A heuristic is
+# passed as a value (`h/v`) and may call its own module's helpers: boru
+# resolves a function value's free words where it was defined.
 #
-# Imported via `import "./graph.aql"`; the importing script need not
-# pre-import the `boru:*` utilities this module will eventually use.
+# Imported via `import "./graph.aql"` — a relative import resolves against
+# the importing file's own directory (a suite in test/ imports
+# "../graph.aql"); the importing script need not pre-import the `boru:*`
+# utilities this module will eventually use.
 
 export "Graph" {
 }
