@@ -356,7 +356,7 @@ topological sort; all apply verbatim here.
 >   **at least** one value (zero is a runtime `each_error`); with more, the
 >   top value is kept.
 > - **Recursion:** the tail-call rules are unchanged (REFERENCE.md); deep
->   *non-tail* recursion (depth 100,000) now runs, but every call still
+>   *non-tail* recursion (depth 100,000) runs, but every call still
 >   spends the step budget below.
 > - **`and` / `or`:** they select an operand, and REFERENCE.md calls that
 >   "short-circuit", but **both operand expressions are always evaluated**
