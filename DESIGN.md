@@ -6,6 +6,18 @@
 > become, and — for the parts where boru's runtime decides the answer —
 > what shape the code will have to take. Sketches below are *shapes*, not
 > implementations.
+>
+> **Re-verified against boru main @ `64c5ab2` (2026-10-01).** Every claim
+> below that cites boru behaviour was re-run on main, where a program is
+> compiled to bytecode and run on the VM — the only execution path since
+> 2026-09-19. The original text stands; dated **Note (2026-10-01)** blocks
+> mark where main differs. In short: the free-word fix (§7) holds on main,
+> so heuristics may call their own module's helpers; there is still no
+> heap or priority queue; `while` now exists and `min`/`max` are no longer
+> reserved (§8); `pop`/`shift` still return two values and `shift` is
+> still O(n) (§6); immutable-Map accumulation is still quadratic; and a
+> run's 10,000,000-step budget caps what one program can search (§8,
+> §12 Q4).
 
 This repository was instantiated from the `bloom-filter` template. The
 scaffolding (CI, hook, skill, plugin, docs skeleton, test naming) has
@@ -87,6 +99,12 @@ should **duplicate the ~40-line Kahn loop rather than take a cross-module
 dependency**: these libraries are vendored by copy, and a cross-module
 function-value dependency is exactly what §7's free-word rule punishes.
 
+> **Note (2026-10-01, boru main @ `64c5ab2`).** The last clause is stale:
+> the free-word rule is fixed (§7, re-verified on main), so a cross-module
+> function-value dependency no longer misresolves. Duplicating the Kahn
+> loop is still reasonable — these libraries are vendored by copy — but as
+> a packaging choice, not a language constraint.
+
 ## 3. The proposed surface
 
 Three words share one engine. All follow the ecosystem convention —
@@ -157,6 +175,16 @@ so a large sentinel that gets added to an edge weight is a crash waiting
 for a big graph. An absent key in the `dist` map is unambiguous, and
 `has` is total.
 
+> **Note (2026-10-01, boru main @ `64c5ab2`).** Confirmed: overflow raises
+> `[boru/integer_overflow]` (e.g. `9223372036854775807 add 1` "does not
+> fit in the Integer range (-9223372036854775808..9223372036854775807)"),
+> and `boru check` flags a statically certain one. The range is the full
+> signed 64-bit range, so "63-bit" means a magnitude of 2⁶³. `has` is
+> total (`false` for an absent key) and evaluates its key like `get`;
+> `get` of an absent key returns `none`. Node keys are String/Atom only (an
+> Integer key to `set` on a map is a `no_signature` check error), and a
+> String and an Atom of the same text share one slot.
+
 ## 6. The enabling primitive: boru has no priority queue
 
 Verified: there is no heap, no priority queue, and no pathfinding code
@@ -172,6 +200,17 @@ below decide its shape:
   compiler refuses (`residual shape beyond Stage 1`). `shift` is also
   O(n), measured quadratic in aggregate. Read the root by index, move
   the last element into slot 0, and shrink.
+
+  > **Note (2026-10-01, boru main @ `64c5ab2`).** Still two values (the
+  > list, then the element on top), and `shift` is still O(n): draining a
+  > 10,000-element flex list takes ~5 s by `shift` and ~25 ms by `pop`
+  > (20,000: ~20 s vs ~40 ms). The "residual shape beyond Stage 1"
+  > refusal no longer exists; what compiles is now shape-dependent.
+  > Keeping the element of a **flex** list's `pop`/`shift` hits three
+  > compiler defects (`dx-report.md`), but the shape recommended here
+  > compiles: `q get 0`, `q set 0 v` and `pop q drop` (shrink, discarding
+  > the element) all compile inside a fn, and integer `div` floors, so
+  > `(i sub 1) div 2` is the parent index.
 - **Lazy deletion over decrease-key.** A decrease-key operation needs a
   node→heap-index map maintained through every sift. The standard
   alternative is to push a duplicate entry at the better priority and
@@ -184,6 +223,13 @@ The `sort` library's `DESIGN.md` proposes a private heap of its own for
 parameterised by a comparator must live in the module that drives it.
 Each library carries its own; that is the boru-imposed cost of the
 single-module rule, and it is cheaper than the alternative.
+
+> **Note (2026-10-01, boru main @ `64c5ab2`).** Re-checked: boru main
+> still has no heap, priority queue or pathfinding word (`boru describe`
+> lists none; `REFERENCE.md`, `design/` and `kg/` mention none). The
+> "cannot be shared" reason is gone — §7 records the scope fix and it
+> holds on main — so sharing `sort`'s heap is now the ordinary
+> dependency-direction question of §0 row 9, not a language limit.
 
 ## 7. The heuristic contract — and the sharp edge
 
@@ -238,6 +284,17 @@ in `sort`: a bare namespace comparator fed to a combinator raises
 is how you ask for the value, so the fix there is `Sort.by-number/r`, not
 a scope change.
 
+> **Note (2026-10-01, boru main @ `64c5ab2`) — re-verified on main.** A
+> heuristic defined in module A that calls A's private `secret`, handed as
+> `A.h/v` to module B (which has its own `secret`) and applied there —
+> directly and through a native `each` callback — runs **A's** `secret`;
+> a heuristic defined in the calling program that calls the caller's own
+> helper resolves too. "Both engines" is now one (the compiled path). The
+> modifier is spelled **`/v`** since 2026-08-19 (ADR-011; `/r` is now an
+> `undefined_word`), so the `sort` fix reads `Sort.by-number/v`, and a
+> heuristic is passed as `h/v` — a bare name holding a function **calls**
+> wherever it appears.
+
 ---
 
 *Original text, superseded:*
@@ -279,6 +336,49 @@ topological sort; all apply verbatim here.
   *types*, so all state is lowercase.
 - **Integer overflow is a hard error at 63 bits**, not a wrap — the
   reason §5 rejects an infinity sentinel.
+
+> **Note (2026-10-01, boru main @ `64c5ab2`) — each bullet re-run.**
+>
+> - **`flex`:** still required, and the gap is wider. Accumulating n keys
+>   into an immutable Map with a copy-returning `set` in a `fold`: ~0.3 s
+>   at n=1,000, ~1.0 s at 2,000, ~4.7 s at 4,000, ~11–17 s at 8,000
+>   (still quadratic), against ~5→25 ms for a `flex` map — several
+>   hundred × at n=8,000 (measured on a shared container; the ratio is
+>   the robust part).
+> - **`Store`:** confirmed — `make Store` raises
+>   `[boru/unsupported]: make: unsupported target type Store`; `Set` is
+>   undefined.
+> - **Loops:** `while [cond] [body]` **exists** since boru 2026-08-21
+>   (`99fc2c3ec`) and compiles inside a fn — the natural shape for "pop
+>   until the frontier is empty". A `for` body's per-iteration values stay
+>   on the stack, so inside a fn they count toward the declared return
+>   arity unless collected (`[for n [...]]`). An `each` body must leave
+>   **at least** one value (zero is a runtime `each_error`); with more, the
+>   top value is kept.
+> - **Recursion:** the tail-call rules are unchanged (REFERENCE.md); deep
+>   *non-tail* recursion (depth 100,000) now runs, but every call still
+>   spends the step budget below.
+> - **`and` / `or`:** they select an operand, and REFERENCE.md calls that
+>   "short-circuit", but **both operand expressions are always evaluated**
+>   (`design/TRUTHINESS.0.md` §5) — `(m has "b") and ((m get "b") gt 0)`
+>   still evaluates the comparison. Nest `if`.
+> - **Reserved names:** `node`, `keys`, `vals`, `has`, `depth`, `stack`,
+>   `walk`, `find`, `list`, `range` are still `[boru/reserved_word]`;
+>   **`min` and `max` are not** (they are `MathUtil.min`/`max`). Also
+>   reserved and tempting here: `size`, `get`, `set`, `del`, `push`,
+>   `pop`, `shift`, `each`, `fold`, `filter`, `sort`, `reverse`, `dup`,
+>   `drop`, `swap`, `over`, `rot`, `pick`, `valof`, `base`; `take` cannot
+>   be a fn name (a core word). Every listed free name is still free, as
+>   are `g`, `h`, `from`, `to`, `goal`, `start`, `edge`, `weight`, `heap`,
+>   `queue`, `pq`, `parent`, `child`, `open`, `closed`, `path`, `result`.
+>   `def N 1000` still binds a type (`iota N` is `[]`).
+> - **Overflow:** confirmed (§5 note).
+> - **New — the step budget.** A run's total evaluation steps are capped
+>   at 10,000,000 by default (`[boru/evaluation_limit]`; raise with
+>   `boru -options steps:N`). A Floyd–Warshall-shaped relaxation over a
+>   flat flex matrix finishes V=50 (125,000 relaxations, ~3 s) and trips
+>   the budget by V=60. Searches over large graphs need either a raised
+>   budget or a documented size ceiling.
 
 ## 9. Testing
 
@@ -361,3 +461,15 @@ Kahn loop per §2); minimum spanning tree (Prim, and Kruskal as the
 4. **Is `Graph.floyd` public or test-only?** It is the natural oracle,
    but O(V³) invites misuse on graphs where it will never finish.
    (Leaning: public, documented with a size warning.)
+
+   *Note (2026-10-01, boru main @ `64c5ab2`):* "never finish" is now
+   bounded — under the default 10,000,000-step budget a V³ relaxation
+   loop stops with `evaluation_limit` at around V≈55 (§8 note), so the
+   size warning should name that ceiling and `-options steps:N`.
+
+*Note on Q3 (2026-10-01, boru main @ `64c5ab2`):* a heuristic built by a
+fn that closes over its goal (`make-h goal` returning
+`(n:Integer => [goal sub n])`) works on main. A heuristic that reads a
+*module-level* name instead sees later re-`def`s of it (late binding;
+`boru check` reports a `late_binding` info), so pass the goal or close
+over a parameter rather than a top-level binding.
